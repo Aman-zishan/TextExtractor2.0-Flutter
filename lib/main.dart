@@ -1,11 +1,14 @@
-import 'dart:io';
 import 'dart:async';
+import 'dart:io';
+
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:textextractor/data/detectText.dart';
 import 'package:textextractor/data/saveText.dart';
 import 'package:textextractor/widgets/customAppBar.dart';
 import 'package:textextractor/widgets/customButtons.dart';
-import 'package:image_picker/image_picker.dart';
+
 import 'widgets/customCards/cardList.dart';
 
 void main() {
@@ -76,7 +79,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   // get Image
-  Future getImage(ImageSource source) async {
+  Future getImage(ImageSource source, BuildContext ctx) async {
     //get image
     final pickedFile = await picker.getImage(
       source: source,
@@ -96,11 +99,20 @@ class _MyHomePageState extends State<MyHomePage> {
             detectedText = value;
             print(detectedText);
           }),
-          onError: (e) {
-            setState(() {
-              detectedText = e.message;
-              print(e.message);
-            });
+          onError: (error) {
+            if (error is DioError && error.type == DioErrorType.DEFAULT) {
+              setState(() {
+                detectedText = "Please check your internet connection";
+                print(detectedText);
+              });
+              Scaffold.of(ctx).showSnackBar(SnackBar(
+                  content: Text(detectedText), duration: Duration(seconds: 3)));
+            } else {
+              setState(() {
+                detectedText = error.message;
+                print(error.detectedText);
+              });
+            }
           },
         );
       } else {
@@ -134,24 +146,27 @@ class _MyHomePageState extends State<MyHomePage> {
                   children: [
                     //Two buttons to call imagePicker
 
-                    ButtonBar(
-                      buttonPadding: EdgeInsets.all(0),
-                      buttonMinWidth: constraints.maxWidth / 2,
-                      buttonTextTheme: ButtonTextTheme.primary,
-                      children: [
-                        CustomButton(
-                            onPressed: () {
-                              getImage(ImageSource.camera);
-                            },
-                            text: " Camera",
-                            icon: Icon(Icons.camera_alt)),
-                        CustomButton(
-                            onPressed: () {
-                              getImage(ImageSource.gallery);
-                            },
-                            text: " Gallery",
-                            icon: Icon(Icons.filter))
-                      ],
+                    Builder(
+                      //provides context to snackbar
+                      builder: (ctx) => ButtonBar(
+                        buttonPadding: EdgeInsets.all(0),
+                        buttonMinWidth: constraints.maxWidth / 2,
+                        buttonTextTheme: ButtonTextTheme.primary,
+                        children: [
+                          CustomButton(
+                              onPressed: () {
+                                getImage(ImageSource.camera, ctx);
+                              },
+                              text: " Camera",
+                              icon: Icon(Icons.camera_alt)),
+                          CustomButton(
+                              onPressed: () {
+                                getImage(ImageSource.gallery, ctx);
+                              },
+                              text: " Gallery",
+                              icon: Icon(Icons.filter))
+                        ],
+                      ),
                     ),
 
                     // Horizontal List of cards to display image and detected text
